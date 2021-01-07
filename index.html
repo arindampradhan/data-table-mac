@@ -38,7 +38,6 @@
         .then((r) => r.json())
         .then((dataList) => {
           const table = new TableFactory("data-table");
-          t = table;
           table.setConfig({
             countPerPage: 10,
             headerFix: true,
@@ -47,7 +46,6 @@
           });
           table.load(dataList);
         });
-        var t;
     </script>
   </body>
 </html>
