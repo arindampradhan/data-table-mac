@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Table</title>
+    <link rel="stylesheet" href="/data-table.css" />
+    <style>
+      body,
+      html {
+        height: 100%;
+        width: 100%;
+        font-family: Helvetica, sans-serif;
+        font-size: 1rem;
+        padding: 0;
+        margin: 0;
+      }
+
+      .container {
+        max-width: 70rem;
+        margin: 0 auto;
+        padding: 4rem 0 0 0;
+      }
+
+      #data-table {
+        margin: 0 auto;
+        max-width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="data-table"></div>
+    </div>
+    <script src="/data-table.js"></script>
+    <script text="text/javascript">
+      fetch("/MOCK_DATA_FORMATTED.JSON")
+        .then((r) => r.json())
+        .then((dataList) => {
+          const table = new TableFactory("data-table");
+          table.setConfig({
+            countPerPage: 10,
+            headerFix: true,
+            isPaginated: true,
+            debug: false,
+          });
+          table.load(dataList);
+        });
+    </script>
+  </body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Table</title>
+    <link rel="stylesheet" href="/data-table.css" />
+    <style>
+      body,
+      html {
+        height: 100%;
+        width: 100%;
+        font-family: Helvetica, sans-serif;
+        font-size: 1rem;
+        padding: 0;
+        margin: 0;
+      }
+
+      .container {
+        max-width: 70rem;
+        margin: 0 auto;
+        padding: 4rem 0 0 0;
+      }
+
+      #data-table {
+        margin: 0 auto;
+        max-width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="data-table"></div>
+    </div>
+    <script src="/data-table.js"></script>
+    <script text="text/javascript">
+      fetch("/MOCK_DATA_FORMATTED.JSON")
+        .then((r) => r.json())
+        .then((dataList) => {
+          const table = new TableFactory("data-table");
+          table.setConfig({
+            countPerPage: 10,
+            headerFix: true,
+            isPaginated: false,
+            debug: false,
+          });
+          table.load(dataList);
+        });
+    </script>
+  </body>
+</html>
