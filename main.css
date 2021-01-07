@@ -20,14 +20,19 @@ html {
 }
 
 .table-wrapper {
-  position: relative;
   border-radius: 0.5rem;
   border: 1px solid #dddddd;
   box-shadow: 1px 4px 9px 2px rgb(143 132 132 / 15%);
+  scroll-behavior: smooth;
 }
 
-.table-wrapper > .plank::after {
+.table-container {
+  position: relative;
+}
+
+.table-container > .plank::after {
   position: absolute;
+  transition: all 1sec ease-in;
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0),
@@ -35,11 +40,22 @@ html {
     rgb(255, 255, 255)
   );
   content: "";
-  width: 5rem;
+  z-index: 0;
+  width: 4rem;
   top: 0;
   height: 100%;
-  right: 1px;
+  right: 0.5px;
   border-radius: 0 0.5rem 0.5rem 0;
+}
+.table-container > .plank {
+  cursor: pointer;
+}
+
+.table-container > .plank:hover::after {
+  transition: all 1sec ease-in;
+  cursor: e-resize;
+  box-shadow: -3px 0px 4px 0px #dddddd78;
+  /* border-left: 1px solid #ddd; */
 }
 
 .row-data {
@@ -72,6 +88,22 @@ html {
 }
 
 .row-data::-webkit-scrollbar-thumb {
+  background-color: rgb(236, 236, 236);
+  border: 1px solid #e9e9e9;
+}
+
+.pagination-wrapper::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background-color: #f5f5f5;
+}
+
+.pagination-wrapper::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+  background-color: #f5f5f5;
+}
+
+.pagination-wrapper::-webkit-scrollbar-thumb {
   background-color: rgb(236, 236, 236);
   border: 1px solid #e9e9e9;
 }
@@ -143,41 +175,62 @@ th.table-head > .row-header--chevron::before {
   color: #000000;
 }
 
-
 /* header */
 
 .header-table-utility {
   display: flex;
 }
 
-.header-table-utility > div  {
+.header-table-utility > div {
   flex: 1;
 }
 
-.header-table-utility > .search-wrapper{
+.header-table-utility > .search-wrapper {
   display: flex;
   justify-content: flex-end;
   z-index: 2;
+  position: relative;
 }
 
-.header-table-utility .table-search-box {
+.header-table-utility .dot {
+  margin: 2px;
+  height: 1rem;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 3;
+  width: 1rem;
+  background-color: #969696;
+  cursor: pointer;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.header-table-utility .dot:hover {
+  background-color: green;
+}
+
+.header-table-utility input.table-search-box {
   padding: 0.9rem 1rem;
   border: 1px solid #ddd;
   border-top-color: transparent;
   border-right-color: transparent;
   border-radius: 0 0.5rem 0 0.5rem;
+  height: 1rem;
 }
 
-.table-search-box:focus, .table-search-box:active, .table-search-box:hover {
+.table-search-box:focus,
+.table-search-box:active,
+.table-search-box:hover {
   outline: none;
 }
 
-
 .pagination-wrapper {
+  overflow: auto;
   padding: 0 0 0.5rem 0;
   margin: 0 auto;
-  max-width: 100%;
-  display: flex;
+  text-align: center;
+  display: block;
   align-items: center;
   justify-self: center;
   max-width: 480px;
@@ -190,14 +243,60 @@ th.table-head > .row-header--chevron::before {
   height: 1.75rem;
 }
 
-
 .pagination-wrapper span {
   padding: 0.5rem;
   cursor: pointer;
   text-align: center;
-  margin: 0 0.5rem;
+  margin: 0.25rem 0.5rem;
   display: inline-flex;
   justify-content: center;
   align-items: center;
   border: 1px solid #ddd;
+}
+
+.pagination-wrapper span.number.active {
+  background: #969696;
+  color: white;
+  border-color: #969696;
+}
+
+.dropdown-entries select {
+  padding: 0 1rem;
+  border: 1px solid #ddd;
+  border-top-color: transparent;
+  border-radius: 0 0 0.5rem 0.5rem;
+  text-align: center;
+  width: 6rem;
+  margin: 0 0.5rem;
+  height: 3rem;
+  text-align: center;
+}
+
+.dropdown-entries select:focus,
+.dropdown-entries select:active,
+.dropdown-entries select:hover {
+  outline: none;
+}
+
+.dropdown-entries {
+  font-size: 0.9rem;
+  color: #888;
+  padding: 0 0.5rem;
+}
+
+.dropdown-entries input::-webkit-outer-spin-button,
+.dropdown-entries input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+.dropdown-entries input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+@media only screen and (max-width: 600px) {
+  .dropdown-entries span {
+    display: none;
+  }
 }
