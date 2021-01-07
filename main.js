@@ -33,12 +33,16 @@ class TableFactory {
       throw Error(`Node with the id: ${nodeId} not found in dom.`);
     }
 
-    this.config = {
-      countPerpage: 5,
-      headerFix: false,
-      initalPage: 1,
-      isPaginated: false,
+    this.defaults = {
+      config: {
+        countPerpage: 5,
+        headerFix: false,
+        initalPage: 1,
+        isPaginated: true,
+      },
     };
+
+    this.config = this.defaults.config;
     this._node = node;
     this._isRendered = false;
     this._currPage = 1;
@@ -72,7 +76,7 @@ class TableFactory {
   _setPageData(data) {
     // update triggers - this._setData(), this.config.countPerpage, this._currPage
     let d = data || this.getData();
-    if(!this.config.isPaginated) {
+    if (!this.config.isPaginated) {
       this.pageData = d;
     } else {
       this.pageData = d.slice(
@@ -124,8 +128,10 @@ class TableFactory {
 
   // render -  trigger
   setPageCount(pageCount) {
-    this.config = Object.assign({}, this.config, { countPerpage: pageCount });
-    this.load(this._initData);
+    this.config = Object.assign({}, this.config, {
+      countPerpage: parseInt(pageCount),
+    });
+    this._setPageData();
   }
 
   // render -  trigger
@@ -146,8 +152,8 @@ class TableFactory {
     if (data && data.length) {
       this.sorting = this.sorting.map((o) => 0); // reset
       this.sorting[columnId] = order;
-      let d = JSON.parse(JSON.stringify(data))
-      const sortedArray = d.concat().sort((a, b) => {
+      // let d = JSON.parse(JSON.stringify(data))
+      const sortedArray = data.sort((a, b) => {
         if (a[columnId] > b[columnId]) {
           return order;
         } else {
@@ -216,20 +222,20 @@ class TableFactory {
     };
 
     const resetNode = node.querySelector('span[action="reset"]');
-    resetNode.addEventListener('click', () => {
-      this.setPage(1);
-    })
+    resetNode.addEventListener("click", () => {
+      this._currPage = 1;
+      this.searchText = '';
+      this.load(this._initData);
+    });
   }
 
   _listenEntriesBox() {
     const node = this.getNode();
-    const inputNode = node.querySelector(`input[data-id="entries-count"]`);
-    console.log(inputNode)
-    inputNode.onkeyup = (e) => {
-      this.entriesCount = e.target.value || 2;
+    const inputNode = node.querySelector(`select[data-id="entries-count"]`);
+    inputNode.addEventListener("change", (e) => {
+      this.entriesCount = e.target.value || 5;
       this.setPageCount(this.entriesCount);
-    };
-
+    });
   }
 
   _listenPagination() {
@@ -257,23 +263,24 @@ class TableFactory {
 
   _listenPlank() {
     const node = this.getNode();
-    let content = node.querySelector('table'), scrollStep = 400;
-    node.querySelector('.plank').addEventListener('click', (e) => {
+    let content = node.querySelector("table"),
+      scrollStep = 400;
+    node.querySelector(".plank").addEventListener("click", (e) => {
       e.preventDefault();
       let sl = content.scrollLeft,
-          cw = content.scrollWidth;
+        cw = content.scrollWidth;
 
-      if ((sl + scrollStep) >= cw) {
+      if (sl + scrollStep >= cw) {
         content.scrollTo({
           top: 0,
           left: cw,
-          behavior: 'smooth'
+          behavior: "smooth",
         });
       } else {
         content.scrollTo({
           top: 0,
-          left: (sl + scrollStep),
-          behavior: 'smooth'
+          left: sl + scrollStep,
+          behavior: "smooth",
         });
       }
     });
@@ -361,13 +368,18 @@ class TableFactory {
   }
 
   _templateDropdown() {
-    const dropdownList = Array.from({ length: this._totalPages }, (_, i) => i + 1);
-    let domDropdown = '';
-    dropdownList.forEach(o => {
-      domDropdown += `<option ${o == 5 ? 'selected disabled': ''} value="${o}">${o}</option>`;
-    })
+    const dropdownList = Array.from(
+      { length: this._totalPages },
+      (_, i) => i + 1
+    );
+    let domDropdown = "";
+    dropdownList.forEach((o) => {
+      domDropdown += `<option ${
+        o === this.config.countPerpage ? "selected disabled" : ""
+      } value="${o}">${o}</option>`;
+    });
 
-    const _id = parseInt(Math.random(1,1000)*1000);
+    const _id = parseInt(Math.random(1, 1000) * 1000);
 
     let dom = `
       <form class="dropdown-entries">
@@ -386,7 +398,7 @@ class TableFactory {
   render(_onlyTable) {
     this._isRendered = true;
     const node = this.getNode();
-    log('rendered', renderCounter)
+    log("rendered", renderCounter);
     renderCounter += 1;
 
     const domTable = `
@@ -425,10 +437,12 @@ class TableFactory {
           </div>
         </div>
         ${domTable}
-        ${this.config.isPaginated ? `
+        ${
+          this.config.isPaginated
+            ? `
           <div class="row-message">
             Showing
-            <span>${((this._currPage - 1 )* this.config.countPerpage) + 1} to
+            <span>${(this._currPage - 1) * this.config.countPerpage + 1} to
             ${this._currPage * this.config.countPerpage}</span>
             of <b><span>${this._totalPages}</span></b>
             entries
@@ -436,7 +450,9 @@ class TableFactory {
           <div class="pagination-wrapper">
             ${this._templatePagination()}
           </div>
-        `: ''}
+        `
+            : ""
+        }
       </div>
     `;
 
