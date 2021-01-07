@@ -3,35 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Table</title>
-    <link rel="stylesheet" href="/main.css" />
+    <title>Data Table</title>
+    <link rel="stylesheet" href="/data-table.css" />
+    <style>
+      body,
+      html {
+        height: 100%;
+        width: 100%;
+        font-family: Helvetica, sans-serif;
+        font-size: 1rem;
+        padding: 0;
+        margin: 0;
+      }
+
+      .container {
+        max-width: 70rem;
+        margin: 0 auto;
+        padding: 4rem 0 0 0;
+      }
+
+      #data-table {
+        margin: 0 auto;
+        max-width: 600px;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
       <div id="data-table"></div>
     </div>
-    <script src="/main.js"></script>
-    <script>
-      // const dataListSample = {
-      //   data: [
-      //     ["Mike", 33, "mike@murphy.com", 170.12],
-      //     ["John", 82, "john@conway.com", 170.52],
-      //     ["Sara", 26, "sara@keegan.com", 171],
-      //     ["John12", 82, "asd@conway.com", 170.52],
-      //     ["Joasdhn", 82, "jodfasadhn@conway.com", 171.52],
-      //   ],
-      //   columns: ["Name", "Age", "Email", "Height(cm)"],
-      // };
-      // const table = new TableFactory("data-table");
-      // table.setConfig({
-      //   countPerPage: 10,
-      //   headerFix: true,
-      // });
-      // table.load(dataListSample);
-      // setTimeout(() => {
-      //   dataListSample.data.pop()
-      //   table.load(dataListSample)
-      // },2000)
+    <script src="/data-table.js"></script>
+    <script text="text/javascript">
+      fetch("/MOCK_DATA_FORMATTED.JSON")
+        .then((r) => r.json())
+        .then((dataList) => {
+          const table = new TableFactory("data-table");
+          t = table;
+          table.setConfig({
+            countPerPage: 10,
+            headerFix: true,
+            isPaginated: true,
+            debug: false,
+          });
+          table.load(dataList);
+        });
+        var t;
     </script>
   </body>
 </html>

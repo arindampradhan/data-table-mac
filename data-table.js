@@ -3,26 +3,6 @@
 const log = console.log;
 let renderCounter = 0;
 
-// perf utils
-const memoize = function (fnToMemoize) {
-  const memoizedCache = {}; // A closeure Object
-  const constructPropertyFromArgs = function (fnToMemoize, args) {
-    let propToCheck = [];
-    propToCheck = propToCheck.concat(fnToMemoize.name, args);
-    return propToCheck.join("|"); // A delimiter to join args
-  };
-
-  return function (...args) {
-    const propToCheck = constructPropertyFromArgs(fnToMemoize, args);
-    if (!memoizedCache[propToCheck]) {
-      memoizedCache[propToCheck] = fnToMemoize(...args);
-    } else {
-      console.log("From Cache ");
-    }
-    return memoizedCache[propToCheck];
-  };
-};
-
 class TableFactory {
   constructor(nodeId) {
     const node = document.getElementById(nodeId);
@@ -39,6 +19,7 @@ class TableFactory {
         headerFix: false,
         initalPage: 1,
         isPaginated: true,
+        debug: false,
       },
     };
 
@@ -55,6 +36,7 @@ class TableFactory {
     this.searchText = "";
     this.entriesCount = "";
     this.paginations = [];
+    this.searchHeadersText = [];
   }
 
   // read only
@@ -73,7 +55,7 @@ class TableFactory {
   }
 
   // render -  trigger
-  _setPageData(data) {
+  _setPageData(data, onlyRenderTable) {
     // update triggers - this._setData(), this.config.countPerpage, this._currPage
     let d = data || this.getData();
     if (!this.config.isPaginated) {
@@ -85,19 +67,40 @@ class TableFactory {
       );
     }
 
-    this._isRendered && this.render();
+    this._isRendered && this.render(onlyRenderTable);
   }
 
-  _setInitialPage() {
+  _titleize(sentence) {
+    if (!sentence.split) return sentence;
+    let _titleizeWord = (string) => {
+        return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+      },
+      result = [];
+    sentence.split(" ").forEach(function (w) {
+      result.push(_titleizeWord(w));
+    });
+    return result.join(" ");
+  }
+
+  _setPageNumbers() {
     // logic
     let arr = [1, 2, 3, 4, 5];
-    if (this._currPage > 2 && this._currPage < this._totalPages - 2) {
+    if (this._currPage > 2) {
       arr = [
         this._currPage - 2,
         this._currPage - 1,
         this._currPage,
         this._currPage + 1,
         this._currPage + 2,
+      ];
+    }
+    if (this._currPage >= this._totalPages - 1) {
+      arr = [
+        this._totalPages - 4,
+        this._totalPages - 3,
+        this._totalPages - 2,
+        this._totalPages - 1,
+        this._totalPages,
       ];
     }
     if (this._totalPages < 5) {
@@ -126,23 +129,41 @@ class TableFactory {
     this._isRendered && this.render();
   }
 
-  // render -  trigger
   setPageCount(pageCount) {
     this.config = Object.assign({}, this.config, {
       countPerpage: parseInt(pageCount),
     });
+    this._totalPages = Math.ceil(this.data.length / this.config.countPerpage);
     this._setPageData();
   }
 
   // render -  trigger
-  setSearch(searchText) {
+  // searchConfig {
+  //   columnIndex,
+  //   searchText,
+  //   _onlyTable,
+  //   _onlyTableBody
+  // }
+  setSearch(searchConfig) {
+    const columnIndex = searchConfig.columnIndex;
+    const searchText = searchConfig.searchText;
     const filteredData = this.getData().filter((rowData) => {
-      const qStr = rowData.join(" ");
+      let qStr = rowData.join(" ");
+      if (columnIndex !== undefined) {
+        const filterMap = this.searchHeadersText
+          .map((o, index) => {
+            return JSON.stringify(rowData[index]).search(o) > -1 ? 1: 0;
+          })
+        return filterMap.reduce((a, b) => a * b, 1);
+      }
       return qStr.search(searchText) > -1;
     });
     // exclusive call
-    this.pageData = filteredData.slice(0, this.config.countPerpage);
-    this._isRendered && this.render(true);
+    this.pageData = this.config.isPaginated
+      ? filteredData.slice(0, this.config.countPerpage)
+      : filteredData;
+    this._isRendered &&
+      this.render(searchConfig._onlyTable, searchConfig._onlyTableBody);
   }
 
   setSort(columnId, order) {
@@ -160,7 +181,7 @@ class TableFactory {
           return -order;
         }
       });
-      this._setPageData(sortedArray);
+      this._setPageData(sortedArray, true);
     }
   }
 
@@ -183,9 +204,16 @@ class TableFactory {
     this._setData(dataList.data);
     this.columns = dataList.columns;
     this.sorting = Array.from({ length: dataList.columns.length }, () => 0); // set everything to 0
-    this._totalPages = Math.floor(
+    this.searchHeadersText = Array.from(
+      { length: dataList.columns.length },
+      () => ""
+    ); // set everything to 0
+    this._totalPages = Math.ceil(
       dataList.data.length / this.config.countPerpage
     );
+    if (this._totalPages < 2) {
+      this.config.isPaginated = false;
+    }
     this._setPageData();
     this.render();
   }
@@ -218,13 +246,14 @@ class TableFactory {
     const inputNode = node.querySelector(`input[data-id="table-search-box"]`);
     inputNode.onkeyup = (e) => {
       this.searchText = e.target.value;
-      this.setSearch(this.searchText);
+      this.setSearch({ searchText: this.searchText, _onlyTable: true });
     };
 
     const resetNode = node.querySelector('span[action="reset"]');
     resetNode.addEventListener("click", () => {
       this._currPage = 1;
-      this.searchText = '';
+      this.searchText = "";
+      this.config = JSON.parse(JSON.stringify(this.defaults.config));
       this.load(this._initData);
     });
   }
@@ -242,23 +271,40 @@ class TableFactory {
     const node = this.getNode();
     this.paginations.forEach((index) => {
       node
-        .querySelector(`span[pagination-no="${index}"]`)
+        .querySelector(`button[pagination-no="${index}"]`)
         .addEventListener("click", () => {
           this.setPage(index);
         });
     });
 
     node
-      .querySelector(`span[pagination-no="next"]`)
+      .querySelector(`button[pagination-no="next"]`)
       .addEventListener("click", () => {
         this.setPage(this._currPage + 1);
       });
 
     node
-      .querySelector(`span[pagination-no="previous"]`)
+      .querySelector(`button[pagination-no="previous"]`)
       .addEventListener("click", () => {
         this.setPage(this._currPage - 1);
       });
+  }
+
+  _listenHeaderSearch() {
+    const node = this.getNode();
+    this.columns.forEach((elem, index) => {
+      const inputNode = node.querySelector(
+        `input[action-id="search-by-${index}"]`
+      );
+      inputNode.onkeyup = (e) => {
+        this.searchHeadersText[index] = e.target.value || "";
+        this.setSearch({
+          searchText: this.searchHeadersText[index],
+          _onlyTableBody: true,
+          columnIndex: index,
+        });
+      };
+    });
   }
 
   _listenPlank() {
@@ -292,6 +338,7 @@ class TableFactory {
     this._listenPlank();
     this.config.isPaginated && this._listenPagination();
     this.config.isPaginated && this._listenEntriesBox();
+    this._listenHeaderSearch();
   }
 
   // render Utils
@@ -315,12 +362,27 @@ class TableFactory {
     rowData.forEach((element, index) => {
       dom += `
         <th column-id="${index}" class="table-head">
-          <span>${element}</span>
-          <i column-id="${index}"
-            class="row-header--chevron ${
-              this.sorting[index] === 1 ? "up" : ""
-            } ${this.sorting[index] === -1 ? "down" : ""}"
-          ></i>
+            <span>${element}</span>
+            <i column-id="${index}"
+              class="row-header--chevron ${
+                this.sorting[index] === 1 ? "up" : ""
+              } ${this.sorting[index] === -1 ? "down" : ""}"
+            ></i>
+        </th>
+      `;
+    });
+    return `<tr>${dom}</tr>`;
+  }
+
+  _templateHeaderSearch() {
+    let dom = "";
+    this.searchHeadersText.forEach((headSearchText, index) => {
+      const element = this.columns[index];
+      dom += `
+        <th column-id="input-${index}" class="table-header-column-input">
+          <input value="${headSearchText}" action-id="search-by-${index}" placeholder="${this._titleize(
+        element
+      )} Search..." name="${element}" />
         </th>
       `;
     });
@@ -344,20 +406,20 @@ class TableFactory {
   }
 
   _templateNoData() {
-    return `<tr><td style="margin: 0 auto;width: 100%;position: absolute; text-align: center;color: #999;">No Data Found!</td></tr>`;
+    return `<tr style="height:5rem; position: relative;"><td style="margin: 0 auto;width: 100%;top: 9rem;position: absolute; text-align: center;color: #999;">No Data Found!</td></tr>`;
   }
 
   _templatePagination() {
     // template
-    this._setInitialPage();
+    this._setPageNumbers();
     let dom = "";
-    dom += `<span pagination-no="previous">Previous</span>`;
+    dom += `<button type="button" pagination-no="previous">Previous</button>`;
     this.paginations.forEach((o) => {
-      dom += `<span class="number ${
+      dom += `<button type="button" class="number ${
         this._currPage === o ? "active" : ""
-      }" pagination-no="${o}">${o}</span>`;
+      }" pagination-no="${o}">${o}</button>`;
     });
-    dom += `<span pagination-no="next">Next</span>`;
+    dom += `<button type="button" pagination-no="next">Next</button>`;
     return dom;
   }
 
@@ -395,32 +457,42 @@ class TableFactory {
     return dom;
   }
 
-  render(_onlyTable) {
+  render(_onlyTable, _onlyTableBody) {
     this._isRendered = true;
     const node = this.getNode();
-    log("rendered", renderCounter);
+    this.config.debug && log("rendered: ", renderCounter);
     renderCounter += 1;
+
+    const domTableBody = `
+      <tbody class="row-body" data-id="body">
+        ${
+          this.pageData.length === 0
+            ? this._templateNoData()
+            : this._templateList(this.pageData)
+        }
+      </tbody>
+    `;
 
     const domTable = `
       <div class="table-container">
         <table entries="${this.pageData.length}" class="row-data">
           <thead class="row-head" data-id="head">
             ${this._templateHeader(this.columns)}
+            ${this._templateHeaderSearch()}
           </thead>
-          <tbody class="row-body" data-id="body">
-            ${
-              this.pageData.length === 0
-                ? this._templateNoData()
-                : this._templateList(this.pageData)
-            }
-          </tbody>
+          ${domTableBody}
         </table>
         <div class="plank"></div>
       </div>
     `;
 
-    if (_onlyTable) {
-      const tableNode = node.querySelector("table");
+    if (_onlyTableBody) {
+      const tableNode = node.querySelector(`tbody[data-id="body"]`);
+      this._setHtml(domTableBody, tableNode);
+      this._addListeners();
+      return;
+    } else if (_onlyTable) {
+      const tableNode = node.querySelector(".table-container");
       this._setHtml(domTable, tableNode);
       this._addListeners();
       return;
@@ -430,7 +502,9 @@ class TableFactory {
     const dom = `
       <div class="table-wrapper">
         <div class="header-table-utility">
-          <div>${this._templateDropdown()}</div>
+          <div>
+            ${this.config.isPaginated ? this._templateDropdown() : ""}
+          </div>
           <div class="search-wrapper">
             ${this._templateSearchBox()}
             <span class="dot" action="reset" title="Reset"></span>
@@ -443,7 +517,10 @@ class TableFactory {
           <div class="row-message">
             Showing
             <span>${(this._currPage - 1) * this.config.countPerpage + 1} to
-            ${this._currPage * this.config.countPerpage}</span>
+            ${Math.min(
+              this._currPage * this.config.countPerpage,
+              this.data.length
+            )}</span>
             of <b><span>${this._totalPages}</span></b>
             entries
           </div>
@@ -460,38 +537,3 @@ class TableFactory {
     this._addListeners();
   }
 }
-
-let table;
-const dataListSample = {
-  data: [
-    ["Mike", 33, "mike@murphy.com", 170.12],
-    ["John", 82, "john@conway.com", 170.52],
-    ["Sara", 26, "sara@keegan.com", 171],
-    ["John12", 82, "asd@conway.com", 170.52],
-    ["Joasdhn", 82, "jodfasadhn@conway.com", 171.52],
-  ],
-  columns: ["Name", "Age", "Email", "Height(cm)"],
-};
-
-fetch("/MOCK_DATA.JSON")
-  .then((r) => r.json())
-  .then((data) => {
-    const columns = Object.keys(data[0]);
-    let _data = data.map((o) => {
-      return columns.map((__) => {
-        return o[__];
-      });
-    });
-
-    table = new TableFactory("data-table");
-    table.setConfig({
-      countPerPage: 10,
-      headerFix: true,
-      isPaginated: true,
-    });
-    const dataList = {
-      data: _data,
-      columns: columns,
-    };
-    table.load(dataList);
-  });
